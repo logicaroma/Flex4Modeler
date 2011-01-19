@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a popup used to change the name of the current model. -->
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   title="Choose a file name"
+			   close="titlewindow_closeHandler(event)">
+	<s:layout>
+		<s:HorizontalLayout paddingBottom="10" paddingLeft="10" paddingRight="10"
+						    paddingTop="10"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import model.DataModel;
+			
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			[Bindable]
+			private var dataModel:DataModel = DataModel.instance;
+			
+			/* Called when the save button is clicked and sets the fileName in the model. */
+			protected function saveButton_clickHandler(event:MouseEvent):void
+			{
+				dataModel.fileName = fileNameInput.text;
+				dataModel.modelChanged = false;
+				dataModel.fileNameSet = true;
+				titlewindow_closeHandler(null);
+			}
+
+			/* Called when the close button is clicked */
+			protected function titlewindow_closeHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+
+			/* Used to submit the new file name if the user hits enter on the fileNameInput. */
+			protected function fileNameInput_keyUpHandler(event:KeyboardEvent):void
+			{
+				if(event.keyCode == 13)
+				{
+					saveButton_clickHandler(null);
+				}
+			}
+
+		]]>
+	</fx:Script>
+	
+	<!-- TextInput used to input the new file name -->
+	<s:TextInput id="fileNameInput" 
+				 text="{dataModel.fileName}" 
+				 keyUp="fileNameInput_keyUpHandler(event)"/>
+	
+	<!-- Save button to rename the file -->
+	<s:Button label="Save" 
+			  id="saveButton" 
+			  click="saveButton_clickHandler(event)"/>
+	
+</s:TitleWindow>

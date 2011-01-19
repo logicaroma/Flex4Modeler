@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					xmlns:s="library://ns.adobe.com/flex/spark" 
+					xmlns:mx="library://ns.adobe.com/flex/mx"
+					xmlns:drawing="view.drawing.*" 
+					xmlns:twoD="view.modeling.twoD.*" 
+					xmlns:model="model.*">
+	
+	<fx:Metadata>
+		[Event(name="geometryAdded",type="controller.events.GeometryChangedEvent")]
+		[Event(name="geometryRemoved",type="controller.events.GeometryChangedEvent")]
+		[Event(name="geometryShown",type="controller.events.GeometryChangedEvent")]
+		[Event(name="geometryHidden",type="controller.events.GeometryChangedEvent")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import controller.events.GeometryChangedEvent;
+			
+			import model.DataModel;
+			
+			[Bindable] 
+			private var dataModel:DataModel = DataModel.instance;
+			
+			/* When the floorplan image is loaded, center the image.  Also mark the model
+			   as being open. */
+			protected function floorPlan_completeHandler(event:Event):void
+			{
+				floorPlan.horizontalCenter = 0;
+				floorPlan.verticalCenter = 0;
+				
+				dataModel.modelOpen = true;
+			}
+			
+			/* Called when the user selects 'close' from the MenuBar. */
+			public function close():void
+			{
+				
+			}
+			
+			/* Called when the user selects 'undo' from the MenuBar. */
+			public function undo():void
+			{
+				drawingSurface.undo();
+				controls2D.undo();
+			}
+
+			/* This is called when the drawingSurface dispatches a geomtetry added event.  It passes
+			   the event to the 2D controls and to the parent (ModelerView) so that it can be passed
+			   to the ThreeDView. */
+			protected function drawingSurface_geometryAddedHandler(event:GeometryChangedEvent):void
+			{
+				controls2D.geometryAdded(event);
+				passUpEvent(event);
+			}
+
+			/* This is called when the drawingSurface dispatches a geomtetry hidden event.  It passes
+			   the event to the 2D controls and to the parent (ModelerView) so that it can be passed
+			   to the ThreeDView. */
+			protected function drawingSurface_geometryHiddenHandler(event:GeometryChangedEvent):void
+			{
+				controls2D.geometryHidden(event);
+				passUpEvent(event);
+			}
+
+			/* This is called when the drawingSurface dispatches a geomtetry removed event.  It passes
+			   the event to the 2D controls and to the parent (ModelerView) so that it can be passed
+			   to the ThreeDView. */
+			protected function drawingSurface_geometryRemovedHandler(event:GeometryChangedEvent):void
+			{
+				controls2D.geometryRemoved(event);				
+				passUpEvent(event);
+			}
+
+			/* This is called when the drawingSurface dispatches a geomtetry shown event.  It passes
+			   the event to the 2D controls and to the parent (ModelerView) so that it can be passed
+			   to the ThreeDView. */
+			protected function drawingSurface_geometryShownHandler(event:GeometryChangedEvent):void
+			{
+				controls2D.geometryShown(event);
+				passUpEvent(event);
+			}
+			
+			/* This is a generic function to pass up a GeometryChangedEvent. */
+			protected function passUpEvent(event:GeometryChangedEvent):void
+			{
+				dataModel.modelChanged = true;
+				
+				var e:GeometryChangedEvent = event.clone() as GeometryChangedEvent;
+				dispatchEvent(e);
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- This group sits behind everything else and holds the floorplan
+	     image and the DrawingSurface. -->
+	<s:Group width="100%"
+			 height="100%">
+		
+		<mx:Image id="floorPlan" 
+				  source="{dataModel.floorPlanSource}"
+				  complete="floorPlan_completeHandler(event)"/>
+		
+		<drawing:DrawingSurface id="drawingSurface"
+								width="100%"
+								height="100%"
+								enabled="{dataModel.modelOpen}"
+								geometryAdded="drawingSurface_geometryAddedHandler(event)"
+								geometryHidden="drawingSurface_geometryHiddenHandler(event)"
+								geometryRemoved="drawingSurface_geometryRemovedHandler(event)"
+								geometryShown="drawingSurface_geometryShownHandler(event)"/>
+	
+	</s:Group>
+	
+	<!-- These are the controls for the 2D view.  These are the different
+	     tools for drawing, the ElementList and the 3D preview. -->
+	<twoD:Controls2D width="250"
+					 height="100%"
+					 id="controls2D"
+					 drawingSurface="{drawingSurface}"
+					 enabled="{dataModel.modelOpen}"/>
+	
+</s:NavigatorContent>

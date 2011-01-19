@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		  xmlns:s="library://ns.adobe.com/flex/spark" 
+		  xmlns:mx="library://ns.adobe.com/flex/mx" 
+		  xmlns:objects="org.papervision3d.objects.*"
+		  creationComplete="vgroup_creationCompleteHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import model.DataModel;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import org.papervision3d.core.geom.renderables.Triangle3D;
+			import org.papervision3d.core.geom.renderables.Vertex3D;
+			import org.papervision3d.objects.DisplayObject3D;
+			
+			private var dataModel:DataModel = DataModel.instance;
+			
+			private var minY:Number = Number.MAX_VALUE;
+			private var maxY:Number = Number.MIN_VALUE;
+			
+			/* Called when creation is complete.  It updates the heightStepper value
+			   when the model3D selectedItem is set. */
+			protected function vgroup_creationCompleteHandler(event:FlexEvent):void
+			{
+				BindingUtils.bindSetter(function(value:*):void {
+					BindingUtils.bindSetter(function(value:*):void {
+						heightStepper.value = getHeight();
+					},dataModel.model3D,"selectedItem");
+				},dataModel,"model3D");
+			}
+			
+			/* This function gets the height of the selected item based on the vertex positions. */
+			private function getHeight():Number
+			{
+				if(dataModel.model3D != null)
+				{
+					var displayObject3D:DisplayObject3D = dataModel.model3D.selectedItem;
+					
+					if(displayObject3D)
+					{
+						var faces:Array = displayObject3D.geometry.faces;
+						for each(var triangle:Triangle3D in faces)
+						{
+							for each(var vertex:Vertex3D in [triangle.v0,triangle.v1,triangle.v2])
+							{
+								minY = Math.min(minY,vertex.y);
+								maxY = Math.max(maxY,vertex.y);
+							}
+						}
+						return maxY-minY;
+					}
+				}
+				return NaN;
+			}
+			
+			/* Called when the height stepper changes.  It updates the height on the 3D model and preview. */
+			private function onHeightStepperChange(event:Event):void
+			{
+				var change:Number = heightStepper.value - (maxY-minY);
+				
+				var displayObject3Ds:Array = [dataModel.model3D.selectedItem,
+											  dataModel.preview3D.getDisplayObject3DByName(dataModel.model3D.selectedItem.name)];
+				for each(var displayObject3D:DisplayObject3D in displayObject3Ds)
+				{
+					updateHeight(change,displayObject3D);
+				}
+				maxY += change;				
+			}			
+			
+			/* Gets the topmost vertices and moves them up to update the height (and moves
+			   the display object down so that it will remain stationary). */
+			private function updateHeight(change:Number,do3d:DisplayObject3D):void
+			{
+				var topVertices:Array = getTopVertices(do3d);
+				
+				for each(var vertex:Vertex3D in topVertices)
+				{
+					vertex.y += change;
+				}
+				
+				do3d.moveDown(change);
+			}
+			
+			/* Returns the topmost vertices of a display object so that its size can be
+			   changed by moving them upwards. */
+			private function getTopVertices(do3d:DisplayObject3D):Array
+			{
+				var tops:Array = [];
+				var faces:Array = do3d.geometry.faces;
+				for each(var triangle:Triangle3D in faces)
+				{
+					for each(var vertex:Vertex3D in [triangle.v0,triangle.v1,triangle.v2])
+					{
+						if(vertex.y == maxY && tops.indexOf(vertex) == -1)
+						{
+							tops.push(vertex);
+						}
+					}
+				}
+				return tops;
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- Contains the height stepper which is used to change the height of a display object on the 3D view. -->
+	<s:HGroup width="100%" verticalAlign="middle">
+		<s:Label text="Height: "/>
+		<s:NumericStepper id="heightStepper" minimum="1" maximum="1000" change="{onHeightStepperChange(event)}"/>
+	</s:HGroup>
+	
+	<!-- Control for changing the color of a display object. (Doesn't work) -->
+	<s:HGroup width="100%" verticalAlign="middle" visible="false">
+		<s:Label text="Color: "/>
+		<mx:ColorPicker/>
+	</s:HGroup>
+	
+</s:VGroup>

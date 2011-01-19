@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" 
+			   xmlns:view="view.*"
+			   minWidth="955" 
+			   minHeight="600"
+			   creationComplete="application_creationCompleteHandler(event)"
+			   keyDown="application_keyDownHandler(event)">
+
+	<fx:Script>
+		<![CDATA[
+			import controller.events.MenuHandlerEvent;
+			
+			import model.DataModel;
+			
+			import mx.events.FlexEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			private var dataModel:DataModel = DataModel.instance;
+			
+			/* Set the pop up layer in the data model.  Also, it adds event listeners
+			   to the HeaderBar that to listen for events that are dispatched by the
+			   MenuHandler. Also load the config file. */
+			protected function application_creationCompleteHandler(event:FlexEvent):void
+			{
+				dataModel.popUpLayer = popUpLayer;
+				
+				configLoader.send();
+			}
+			
+			/* Called when a key is pressed.  If the key combination is ctrl+z it calls the undo function. */
+			protected function application_keyDownHandler(event:KeyboardEvent):void
+			{
+				if(event.ctrlKey)
+				{
+					if(event.keyCode == 90)
+					{
+						modelerView.undo();
+					}
+				}
+			}
+
+			/* This is called when the user selects 'close' from the header bar. */
+			protected function headerBar_menuHandlerCloseHandler(event:MenuHandlerEvent):void
+			{
+				modelerView.close();
+			}
+
+			/* This is called when the user selects 'save' from the header bar. */
+			protected function headerBar_menuHandlerSaveHandler(event:MenuHandlerEvent):void
+			{
+				modelerView.save();
+			}
+
+			/* This is called when the user selects 'undo' from the header bar. */
+			protected function headerBar_menuHandlerUndoHandler(event:MenuHandlerEvent):void
+			{
+				modelerView.undo();
+			}
+
+			/* Function which handles loading the config file. */
+			protected function configLoader_resultHandler(event:ResultEvent):void
+			{
+				var xml:XML = event.result as XML;
+				dataModel.colladaServiceURL = xml.collada_service_url;
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<mx:HTTPService id="configLoader" resultFormat="e4x" url="config.xml"
+						result="configLoader_resultHandler(event)"/>
+	</fx:Declarations>
+
+	<s:VGroup width="100%" 
+			  height="100%">
+		
+		<!-- The HeaderBar contains the heading, including the title, menu and
+		     model name. -->
+		<view:HeaderBar width="100%"
+						id="headerBar"
+						menuHandlerClose="headerBar_menuHandlerCloseHandler(event)"
+						menuHandlerSave="headerBar_menuHandlerSaveHandler(event)"
+						menuHandlerUndo="headerBar_menuHandlerUndoHandler(event)"/>
+		
+		<!-- The ModelerView contains the rest of the visible parts of the 
+			 application, including the 2D and 3D views. -->
+		<view:ModelerView width="100%" 
+						  height="100%"
+						  id="modelerView"/>
+	</s:VGroup>
+	
+	<!-- Layer for adding pop ups -->
+	<s:Group width="100%"
+			 height="100%"
+			 id="popUpLayer"/>
+	
+</s:Application>

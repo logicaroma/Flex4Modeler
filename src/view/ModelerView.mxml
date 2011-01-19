@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 xmlns:modeling="view.modeling.*" 
+		 xmlns:threeD="view.modeling.threeD.*" 
+		 xmlns:twoD="view.modeling.twoD.*"
+		 creationComplete="vgroup_creationCompleteHandler(event)" >
+	
+	<fx:Script>
+		<![CDATA[
+			import controller.events.GeometryChangedEvent;
+			
+			import model.DataModel;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			import view.popups.FileNameChooserPopUp;
+			
+			[Bindable] 
+			private var dataModel:DataModel = DataModel.instance;
+			
+			private var fileNameChooser:FileNameChooserPopUp; 
+
+			/* Called when the ModelerView is completely created, used to bind the selectedIndex
+			   of the viewStack to the selectedViewIndex in the dataModel */
+			protected function vgroup_creationCompleteHandler(event:FlexEvent):void
+			{
+				BindingUtils.bindProperty(viewStack,"selectedIndex",dataModel,"selectedViewIndex");
+			}
+			
+			/* Passes a close command to both the 2D and 3D views. */
+			public function close():void
+			{
+				twoDView.close();
+				threeDView.close();
+			}
+			
+			/* Save function which adds the FileNameChooserPopUp if a file name hasn't been chosen. */
+			public function save():void
+			{
+				if(!dataModel.fileNameSet)
+				{
+					fileNameChooser = new FileNameChooserPopUp();
+					PopUpManager.addPopUp(fileNameChooser,dataModel.popUpLayer,true);
+					PopUpManager.centerPopUp(fileNameChooser);
+				}
+			}
+			
+			/* Passes an undo command to both the 2D and 3D views. */
+			public function undo():void
+			{
+				twoDView.undo();
+				threeDView.undo();
+			}
+
+			/* Passes the GeometryChangedEvent to the threeDView. */
+			protected function twoDView_geometryAddedHandler(event:GeometryChangedEvent):void
+			{
+				threeDView.geometryAdded(event);
+			}
+
+			/* Passes the GeometryChangedEvent to the threeDView. */
+			protected function twoDView_geometryHiddenHandler(event:GeometryChangedEvent):void
+			{
+				threeDView.geometryHidden(event);
+			}
+
+			/* Passes the GeometryChangedEvent to the threeDView. */
+			protected function twoDView_geometryRemovedHandler(event:GeometryChangedEvent):void
+			{
+				threeDView.geometryRemoved(event);
+			}
+
+			/* Passes the GeometryChangedEvent to the threeDView. */
+			protected function twoDView_geometryShownHandler(event:GeometryChangedEvent):void
+			{
+				threeDView.geometryShown(event);
+			}
+
+		]]>
+	</fx:Script>
+	
+	<s:VGroup width="100%"
+			  height="100%"
+			  horizontalAlign="center">
+		<!-- The ViewStack is what actually holds the 2D and 3D views. -->
+		<mx:ViewStack id="viewStack"
+					  width="100%"
+					  height="100%"
+					  selectedIndex="{dataModel.selectedViewIndex}"
+					  creationPolicy="all">
+			
+			<!-- The 2D view has all the controls for creating the model in 2D. -->
+			<twoD:TwoDView width="100%"
+						   height="100%"
+						   label="2D"
+						   id="twoDView"
+						   geometryAdded="twoDView_geometryAddedHandler(event)"
+						   geometryHidden="twoDView_geometryHiddenHandler(event)"
+						   geometryRemoved="twoDView_geometryRemovedHandler(event)"
+						   geometryShown="twoDView_geometryShownHandler(event)"/>
+			
+			<!-- The 3D view displays the created model in 3D. -->
+			<threeD:ThreeDView width="100%"
+							   height="100%"
+							   label="3D"
+							   id="threeDView"/>
+			
+		</mx:ViewStack>
+	</s:VGroup>
+	
+	<!-- This ButtonBar is for quickly changing between the 2D and 3D modes. -->
+	<s:VGroup enabled="{dataModel.modelOpen}"
+			  horizontalCenter="0"
+			  bottom="5">
+		<s:ButtonBar id="view" 
+					 dataProvider="{viewStack}" 
+					 selectedIndex="0"/>
+	</s:VGroup>	
+	
+</s:Group>

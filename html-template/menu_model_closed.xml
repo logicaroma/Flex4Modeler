@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+
+<!-- Use this file to change the names of the menu items or the key shortcuts.
+     However, do not change the data field or that menu item will not work. -->
+
+<menu>
+	<menuparent label="File">
+		<menuitem label="New Model" 
+				  data="new" 
+				  accelerator="Ctrl+N" 
+				  enabled="true"/>
+		<menuitem label="Load COLLADA" 
+				  data="load" 
+				  accelerator="Ctrl+L"
+				  enabled="true"/>
+		<menuitem label="Close" 
+				  data="close" 
+				  accelerator="Ctrl+X"
+				  enabled="false"/>
+		<menuitem label="Rename" 
+				  data="rename" 
+				  accelerator="Ctrl+R"
+				  enabled="false"/>
+		<menuitem label="Save" 
+				  data="save" 
+				  accelerator="Ctrl+S"
+				  enabled="false"/>
+	</menuparent>
+	<menuparent label="Edit">
+		<menuitem label="Undo" 
+				  data="undo" 
+				  accelerator="Ctrl+Z"
+				  enabled="false"/>
+	</menuparent>
+	<menuparent label="View">
+		<menuitem label="2D" 
+				  data="2d" 
+				  accelerator="Ctrl+2"
+				  enabled="false"/>
+		<menuitem label="3D" 
+				  data="3d" 
+				  accelerator="Ctrl+3"
+				  enabled="false"/>
+	</menuparent>
+</menu>

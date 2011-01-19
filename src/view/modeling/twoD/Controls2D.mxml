@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		  xmlns:s="library://ns.adobe.com/flex/spark" 
+		  xmlns:mx="library://ns.adobe.com/flex/mx" 
+		  xmlns:pv3d="view.pv3d.*" 
+		  xmlns:controls="view.controls.*" 
+		  xmlns:drawing="view.drawing.*"
+		  creationComplete="vgroup_creationCompleteHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import controller.events.GeometryChangedEvent;
+			
+			import model.DataModel;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.core.FlexGlobals;
+			import mx.core.IVisualElement;
+			import mx.events.FlexEvent;
+			
+			import spark.filters.ColorMatrixFilter;
+			
+			import view.drawing.DrawingSurface;
+			
+			[Bindable]
+			private var dataModel:DataModel = DataModel.instance;
+
+			/* Creation complete function which sets the preview in the model. */
+			protected function vgroup_creationCompleteHandler(event:FlexEvent):void
+			{
+				dataModel.preview3D = this.preview3D;
+			}
+			
+			/* This function returns the currently selected button. */
+			[Bindable] 
+			private function get selectedButton():String
+			{
+				for(var x:Number = 0; x < controlButtons2D.numElements; x++)
+				{
+					var element:IVisualElement = controlButtons2D.getElementAt(x);
+					if(element is Button && (element as Button).selected)
+					{
+						return (element as Button).id;
+					}
+				}
+				return null;
+			}
+			private function set selectedButton(value:String):void 
+			{
+				if(drawingSurface)
+				{
+					drawingSurface.type = selectedButton;
+				}
+			}
+			
+			private var _drawingSurface:DrawingSurface;
+			
+			[Bindable]
+			public function get drawingSurface():DrawingSurface
+			{
+				return _drawingSurface;
+			}
+			public function set drawingSurface(value:DrawingSurface):void
+			{
+				if(_drawingSurface != value)
+				{
+					_drawingSurface = value;
+					BindingUtils.bindProperty(_drawingSurface,"elements",this,"elementList");
+//					_drawingSurface.elements = elementList;
+				}
+			}
+			
+			
+			/* This functon returns a color matrix filter which makes an image black and white. */
+			[Bindable] 
+			private function get bwFilter():ColorMatrixFilter
+			{
+				var rLum:Number = 0.2225, gLum:Number = 0.7169, bLum:Number = 0.0606;
+				var matrix:Array = [rLum, gLum, bLum, 0, 0, rLum, gLum, bLum, 0, 0, rLum, gLum, bLum, 0, 0, 0, 0, 0, 1, 0];
+				return new ColorMatrixFilter(matrix);
+			}
+			private function set bwFilter(value:ColorMatrixFilter):void {}
+			
+			/* This is called when any button is clicked.  It sets each button to not
+			   be selected, unless it is the button that was clicked.  It also updates
+			   the selectedButton so anything bound to it will be updated. */
+			private function buttonClick(event:MouseEvent):void
+			{
+				for(var x:Number = 0; x < controlButtons2D.numElements; x++)
+				{
+					var element:IVisualElement = controlButtons2D.getElementAt(x);
+					if(element is Button && element != event.target)
+					{
+						(element as Button).selected = false;
+					}
+				}
+				selectedButton = "";
+			}
+			
+			/* Called when the user clicks 'undo' on the MenuBar. */
+			public function undo():void
+			{
+				elementList.undo();
+			}
+			
+			/* This function is called when the user draws on the floorplan. It passes the 
+			   2D geometry to the 3D model. */
+			public function geometryAdded(event:GeometryChangedEvent):void
+			{
+				var w:Number = FlexGlobals.topLevelApplication.width;
+				var h:Number = FlexGlobals.topLevelApplication.height;
+				preview3D.addGeometry(event.geometry,w,h);
+			}
+			
+			/* When a geometry is hidden using the ElementList, this passes on that geometry
+			   to the 3D model so that its 3D equivalent can also be hidden. */
+			public function geometryHidden(event:GeometryChangedEvent):void
+			{
+				preview3D.hideGeometry(event.geometry);
+			}
+			
+			/* When a geometry is removed using the ElementList, this passes on that geometry
+			to the 3D model so that its 3D equivalent can also be removed. */
+			public function geometryRemoved(event:GeometryChangedEvent):void
+			{
+				preview3D.removeGeometry(event.geometry);
+			}
+			
+			/* When a geometry is hidden using the ElementList, this passes on that geometry
+			   to the 3D model so that its 3D equivalent can also be hidden. */
+			public function geometryShown(event:GeometryChangedEvent):void
+			{
+				preview3D.showGeometry(event.geometry);
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- Panel which holds all of the drawing controls. -->
+	<s:Panel title="Controls" 
+			 width="100%" 
+			 id="controlsPanel2D" 
+			 minHeight="0">
+		<s:VGroup width="100%" 
+				  horizontalAlign="center"
+				  right="2" 
+				  left="2" 
+				  top="2" 
+				  bottom="2">
+			<s:HGroup width="100%" 
+					  horizontalAlign="center" 
+					  id="controlButtons2D">
+				<mx:Button icon="@Embed(source='assets/icons/line.png')" 
+						   toggle="true" 
+						   width="30" 
+						   height="30" 
+						   id="lineButton"
+						   click="{buttonClick(event)}" 
+						   selected="true"/>
+				<mx:Button icon="@Embed(source='assets/icons/curve.png')" 
+						   toggle="true" 
+						   width="30" 
+						   height="30" 
+						   id="curveButton"
+						   click="{buttonClick(event)}"/>
+				<mx:Button icon="@Embed(source='assets/icons/rectangle.png')" 
+						   toggle="true" 
+						   width="30" 
+						   height="30" 
+						   id="rectangleButton"
+						   click="{buttonClick(event)}"/>
+				<mx:Button icon="@Embed(source='assets/icons/circle.png')" 
+						   toggle="true" 
+						   width="30" 
+						   height="30" 
+						   id="circleButton"
+						   click="{buttonClick(event)}"/>
+				<mx:Button icon="@Embed(source='assets/icons/fill.png')" 
+						   toggle="true" 
+						   width="30" 
+						   height="30" 
+						   id="fillButton"
+						   click="{buttonClick(event)}" 
+						   filters="{[bwFilter]}" 
+						   enabled="false"
+						   includeInLayout="false" 
+						   visible="false"/>
+				<mx:ColorPicker selectedColor="0x0" 
+								id="colorPicker" 
+								width="30" 
+								height="30"/>
+			</s:HGroup>
+		</s:VGroup>
+	</s:Panel>
+	
+	<!-- Panel which holds the ElementList which gives controls to hide/view/remove geometries. -->
+	<s:Panel title="Elements" 
+			 width="100%" 
+			 height="100%">
+		<controls:ElementList width="100%" 
+							  height="100%" 
+							  id="elementList"
+							  surface="{drawingSurface}" 
+							  borderVisible="false"/>
+	</s:Panel>
+	
+	<!-- The 3D preview which shows what the 3D model will look like. -->
+	<s:Panel title="3D Preview" 
+			 width="100%" 
+			 height="200">
+		<pv3d:ModelerPV3D id="preview3D" 
+						  cameraPitch="15" 
+						  cameraYaw="90"
+						  mouseEnabled="true" 
+						  zoom="40"/>
+	</s:Panel>
+	
+</s:VGroup>

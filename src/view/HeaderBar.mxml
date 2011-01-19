@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		  xmlns:s="library://ns.adobe.com/flex/spark" 
+		  xmlns:mx="library://ns.adobe.com/flex/mx" 
+		  xmlns:rphelan="com.rphelan.controls.*"
+		  creationComplete="vgroup_creationCompleteHandler(event)">
+	
+	<fx:Metadata>
+		[Event(name="menuHandlerClose",type="controller.events.MenuHandlerEvent")]
+		[Event(name="menuHandlerSave",type="controller.events.MenuHandlerEvent")]
+		[Event(name="menuHandlerUndo",type="controller.events.MenuHandlerEvent")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import controller.events.MenuHandlerEvent;
+			
+			import model.DataModel;
+			import model.MenuHandler;
+			
+			import mx.containers.Panel;
+			import mx.events.FlexEvent;
+			import mx.events.MenuEvent;
+			import mx.managers.PopUpManager;
+			
+			[Bindable]
+			private var menuHandler:MenuHandler = MenuHandler.instance;
+			
+			[Bindable] 
+			private var dataModel:DataModel = DataModel.instance;
+			
+			/* Function for adding the event listeners to the menuHandler */
+			protected function vgroup_creationCompleteHandler(event:FlexEvent):void
+			{
+				menuHandler.addEventListener(MenuHandlerEvent.CLOSE,menuHandler_onClose);
+				menuHandler.addEventListener(MenuHandlerEvent.SAVE,menuHandler_onSave);		
+				menuHandler.addEventListener(MenuHandlerEvent.UNDO,menuHandler_onUndo);
+			}
+			
+			/* Function for handling all the actions of the menu. */
+			protected function menu_itemClickHandler(event:MenuEvent):void
+			{
+				menuHandler.handleCommand((event.item as XML).@data);
+			}
+			
+			/* Called when the MenuHandler dispatches a close event (the user selects
+			   'close' on the HeaderMenu).  It passes on the MenuHandlerEvent. */
+			protected function menuHandler_onClose(event:MenuHandlerEvent):void
+			{
+				dispatchEvent(event.clone() as MenuHandlerEvent);
+			}
+			
+			/* Called when the MenuHandler dispatches a save event (the user selects
+			   'save' on the HeaderMenu).  It passes on the MenuHandlerEvent. */
+			protected function menuHandler_onSave(event:MenuHandlerEvent):void
+			{
+				dispatchEvent(event.clone() as MenuHandlerEvent);
+			}
+			
+			/* Called when the MenuHandler dispatches an undo event (the user selects
+			   'undo' on the HeaderMenu).  It passes on the MenuHandlerEvent. */
+			protected function menuHandler_onUndo(event:MenuHandlerEvent):void
+			{
+				dispatchEvent(event.clone() as MenuHandlerEvent);
+			}			
+		]]>
+	</fx:Script>
+	
+	<!-- The title of the header -->
+	<s:VGroup paddingTop="5" 
+			  paddingLeft="5">
+		<s:Label text="Flex 3D Modeler" 
+				 fontWeight="bold" 
+				 fontSize="30"/>
+	</s:VGroup>
+	
+	<!-- This VGroup holds the rest of the header, including the menu and file name -->
+	<s:VGroup width="100%" 
+			  gap="0">
+		<s:Line width="100%">
+			<s:stroke>
+				<mx:SolidColorStroke color="0x0" 
+									 weight="1"/>
+			</s:stroke>
+		</s:Line>
+		<s:Group width="100%">
+			<s:Rect width="100%" 
+					height="100%">
+				<s:fill>
+					<mx:SolidColor color="#DDDDDD"/>
+				</s:fill>
+			</s:Rect>
+			<!-- The menu bar which controls loading and saving models -->
+			<rphelan:AcceleratorMenuBar dataProvider="{dataModel.menuXML}" 
+										labelField="@label" 
+										width="100%"
+										backgroundSkin="{null}" 
+										id="menu" 
+										itemClick="menu_itemClickHandler(event)"
+										showRoot="false"/>
+			<!-- The model file name, including an indicator for whether the model has
+			     currently been saved. -->
+			<s:HGroup height="100%" 
+					  width="100%" 
+					  horizontalAlign="center" 
+					  verticalAlign="middle">
+				<s:Label id="changedIndicator" 
+						 fontWeight="bold" 
+						 color="0xff0000" 
+						 fontSize="14"
+						 text="*" 
+						 visible="{dataModel.modelChanged &amp;&amp; 
+						 	dataModel.modelOpen}"/>
+				<s:HGroup gap="0">
+					<s:Label id="modelName" 
+							 fontWeight="bold" 
+							 fontSize="14" 
+							 visible="{dataModel.modelOpen}"
+							 text="{dataModel.fileName}"/>
+					<s:Label text=".dae" 
+							 fontWeight="bold" 
+							 fontSize="14" 
+							 visible="{dataModel.modelOpen}"/>
+				</s:HGroup>
+			</s:HGroup>
+		</s:Group>
+		<s:Line width="100%">
+			<s:stroke>
+				<mx:SolidColorStroke color="0x0" 
+									 weight="1"/>
+			</s:stroke>
+		</s:Line>
+	</s:VGroup>
+	
+</s:VGroup>

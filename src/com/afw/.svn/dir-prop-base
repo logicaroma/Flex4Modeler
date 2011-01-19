@@ -1,0 +1,17 @@
+K 13
+bugtraq:label
+V 8
+Ticket #
+K 15
+bugtraq:message
+V 15
+Ticket #%BUGID%
+K 11
+bugtraq:url
+V 66
+https://svn.cattlab.umd.edu/cgi-bin/dataextract.cgi/ticket/%BUGID%
+K 21
+bugtraq:warnifnoissue
+V 4
+true
+END

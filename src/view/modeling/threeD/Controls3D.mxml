@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		  xmlns:s="library://ns.adobe.com/flex/spark" 
+		  xmlns:mx="library://ns.adobe.com/flex/mx"
+		  xmlns:threeD="view.modeling.threeD.*" 
+		  xmlns:pv3d="view.pv3d.*">
+
+	<fx:Script>
+		<![CDATA[
+			import model.DataModel;
+			import model.util.ColladaUtil;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import org.papervision3d.objects.DisplayObject3D;
+			
+			import view.pv3d.ModelerPV3D;
+			
+			[Bindable]
+			public var dataModel:DataModel = DataModel.instance;
+			
+			[Bindable]
+			public var selectedItem:DisplayObject3D;
+			
+			[Bindable]
+			public var previewSelectedItem:DisplayObject3D;
+			
+			/* This function passes the COLLADA generated to the collada service.
+			   It then saves it to the server so that it can be downloaded. */
+			protected function colladaDownloadButton_clickHandler(event:MouseEvent):void
+			{
+				var model3D:ModelerPV3D = dataModel.model3D;
+				var displayObject3Ds:ArrayCollection = model3D.displayObject3Ds;
+				
+				if(displayObject3Ds.length > 0)
+				{
+					var source:String = dataModel.floorPlanSource.toString();
+					if(source.indexOf("www") == -1 || source.indexOf("http") == -1)
+					{
+						source = "";
+					}
+					
+					var collada:String = ColladaUtil.getCollada(displayObject3Ds.toArray(),source);
+					collada = collada.replace(/  /g,"\t");
+					
+					colladaService.request = {method: "save", content: collada, filename: dataModel.fileName};
+					colladaService.addEventListener(ResultEvent.RESULT,saveService_resultHandler);
+					colladaService.send();
+				}
+			}
+			
+			/* This function is called after the COLLADA is saved in order to download it. */
+			protected function saveService_resultHandler(event:ResultEvent):void
+			{
+				var request:URLRequest = new URLRequest(colladaService.url + "?method=download&filename=" + dataModel.fileName);
+				navigateToURL(request,"_blank");
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>		
+		<mx:HTTPService id="colladaService" 
+						method="POST"
+						url="{dataModel.colladaServiceURL}"/>
+	</fx:Declarations>
+	
+	
+	<!-- Properties of the selected item on the 3D model.  It is used to update
+	     the height of the selected item. -->
+	<s:Panel title="Properties" 
+			 width="100%">
+		
+		<s:VGroup width="100%" 
+				  height="100%"
+				  visible="{dataModel.model3D != null &amp;&amp; dataModel.model3D.selectedItem == null}" 
+				  includeInLayout="{dataModel.model3D != null &amp;&amp; dataModel.model3D.selectedItem == null}"
+				  horizontalAlign="center" 
+				  verticalAlign="middle">
+			
+			<s:Label alpha=".9" 
+					 text="Select an item to view or edit its properties"
+					 color="0xcccccc"/>
+			
+		</s:VGroup>
+		
+		<threeD:DO3DInfo width="100%" 
+						 height="100%"
+						 visible="{dataModel.model3D != null &amp;&amp; dataModel.model3D.selectedItem != null}" 
+						 includeInLayout="{dataModel.model3D != null &amp;&amp; dataModel.model3D.selectedItem != null}" 
+						 id="selectedItemInfo"
+						 paddingBottom="10" 
+						 paddingLeft="10" 
+						 paddingRight="10" 
+						 paddingTop="10"/>
+	</s:Panel>
+	
+	<!-- Contains a button for downloading the COLLADA of the 3D model. -->
+	<s:Panel title="COLLADA" 
+			 width="100%" 
+			 minHeight="0">
+		<s:VGroup width="100%" 
+				  height="100%" 
+				  horizontalAlign="center" 
+				  verticalAlign="middle"
+				  paddingBottom="5" 
+				  paddingTop="5">
+			<mx:Button id="colladaDownloadButton" 
+					   label="Download"
+					   click="colladaDownloadButton_clickHandler(event)"/>
+		</s:VGroup>
+	</s:Panel>
+	
+</s:VGroup>

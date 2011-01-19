@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   title.image="Load floorplan image"
+			   title.collada="Load COLLADA file"
+			   close="{PopUpManager.removePopUp(this)}">
+
+	<fx:Metadata>
+		[Event(name="image",type="controller.events.FileLoadEvent")]
+		[Event(name="collada",type="controller.events.FileLoadEvent")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import controller.events.FileLoadEvent;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.events.TextOperationEvent;
+			
+			/* Variables and Constants */
+			private const baseRegex:String = "(http[s]?://|www\.).*\.";
+			private const imageRegex:String = baseRegex + "(gif|jpeg|jpg|png)";
+			private const colladaRegex:String = baseRegex + "(dae)";
+			
+			[Bindable]
+			private var fileReference:FileReference = new FileReference();
+			
+			private var colladaValid:Boolean = false;
+			private var colladaValidSet:Boolean = false;
+			private var loader:URLLoader;			
+			
+			public static const STATE_IMAGE:String = "image";
+			public static const STATE_COLLADA:String = "collada";
+			
+			/* Functions */
+			
+			/* This function handles the creation of a Browse dialogue for loading local images/COLLADA.
+			   It creates a filter so that only accepted file types will be able to be loaded. */
+			protected function browseButton_clickHandler(event:MouseEvent):void
+			{
+				fileReference.addEventListener(Event.SELECT,fileReference_onSelect);
+				if(currentState == STATE_IMAGE)
+				{
+					fileReference.browse([new FileFilter("Images", "*.gif;*.jpeg;*.jpg;*.png")]);
+				}
+				else if(currentState == STATE_COLLADA)
+				{
+					fileReference.browse([new FileFilter("COLLADA", "*.dae")]);
+				}
+			}
+			
+			/* This function is called when the user selects a file.  It sets the fileName from
+			   the selected file, and if it is an image it loads it for the preview image. */
+			protected function fileReference_onSelect(event:Event):void
+			{
+				fileReference.removeEventListener(Event.SELECT,fileReference_onSelect);
+				fileName.text = fileReference.name;
+
+				if(currentState == STATE_IMAGE)
+				{
+					fileReference.addEventListener(Event.COMPLETE,fileReference_onComplete);
+					fileReference.load();
+				}
+			}
+			
+			/* This is called when the file reference is loaded in order to set the source of
+			   the preview image. */
+			protected function fileReference_onComplete(event:Event):void
+			{
+				fileReference.removeEventListener(Event.COMPLETE,fileReference_onComplete);
+				
+				localPreview.source = fileReference.data;
+				localPreview.addEventListener(Event.COMPLETE,localPreview_onComplete);
+			}
+			
+			/* Since loading the image could possibly resize the pop up, center it again after
+			   the image is loaded. */
+			protected function localPreview_onComplete(event:Event):void
+			{
+				localPreview.removeEventListener(Event.COMPLETE,localPreview_onComplete);
+				PopUpManager.centerPopUp(this);				
+			}
+
+			/* This function attempts to validate the URL input using regular expressions. */
+			protected function urlInput_changeHandler(event:TextOperationEvent):void
+			{
+				var url:String = urlInput.text;
+				var pattern:RegExp;
+				/* If it is an image and the image file is valid, it shows a preview of the image. */
+				if(currentState == STATE_IMAGE)
+				{
+					pattern = new RegExp(imageRegex);
+					if(pattern.exec(url))
+					{
+						webPreview.source = url;
+					}
+				}
+				/* If it is COLLADA, it makes sure the COLLADA is valid by checking the HTTP status. */
+				else if(currentState == STATE_COLLADA)
+				{
+					colladaValidSet = false;
+					pattern = new RegExp(colladaRegex);
+					if(pattern.exec(url))
+					{
+						loader = new URLLoader();
+						loader.addEventListener(IOErrorEvent.IO_ERROR,loader_onIOError);
+						loader.addEventListener(HTTPStatusEvent.HTTP_STATUS,loader_onHTTPStatus);
+						loader.load(new URLRequest(url));
+					}
+				}
+			}
+			
+			/* If there is an IO error, that means the COLLADA is invalid.  Ignore the error,
+			   and handle it if the user tries to submit.  */
+			protected function loader_onIOError(event:IOErrorEvent):void 
+			{
+				loader.removeEventListener(IOErrorEvent.IO_ERROR,loader_onIOError);
+				loader.removeEventListener(HTTPStatusEvent.HTTP_STATUS,loader_onHTTPStatus);
+			}
+			
+			/* This check the HTTP status of the COLLADA URL.  If it returns a 200 status, it is
+			   valid, otherwise it is not. */
+			protected function loader_onHTTPStatus(event:HTTPStatusEvent):void
+			{
+				loader.removeEventListener(IOErrorEvent.IO_ERROR,loader_onIOError);
+				loader.removeEventListener(HTTPStatusEvent.HTTP_STATUS,loader_onHTTPStatus);
+				
+				if(event.status == 200)
+				{
+					colladaValid = true;
+				}
+				else
+				{
+					colladaValid = false;
+				}
+				colladaValidSet = true;
+			}
+
+			/* Handles cases for (attempting to) load an image or COLLADA file. */
+			protected function loadButton_clickHandler(event:MouseEvent):void
+			{
+				/* Handler for loading an image. */
+				if(currentState == STATE_IMAGE)
+				{
+					var e:FileLoadEvent;
+					/* Handler for loading a local image. */
+					if(navigator.selectedChild == local)
+					{
+						/* If there is no file name, then a file hasn't been loaded.  In
+						   this case, show the error text. */
+						if(fileName.text == "")
+						{
+							error.visible = error.includeInLayout = true;
+						}
+						/* The image is valid, so load it. */
+						else
+						{
+							e = new FileLoadEvent(FileLoadEvent.IMAGE);
+							e.source = localPreview.source;
+						}
+					}
+					/* Handler for loading an image from the web. */
+					else if(navigator.selectedChild == web)
+					{
+						var pattern:RegExp = new RegExp(imageRegex);
+						/* If the URL is blank, does not match a valid image or the preview hasn't loaded,
+						   then show the error message. */
+						if(urlInput.text == "" || !pattern.exec(urlInput.text) || isNaN(webPreview.bytesLoaded))
+						{
+							error.visible = error.includeInLayout = true;
+						}
+						/* URL of the image is valid, so load it. */
+						else
+						{
+							e = new FileLoadEvent(FileLoadEvent.IMAGE);
+							e.source = webPreview.source;
+						}
+					}
+				}
+				/* Handler for loading a COLLADA file. */
+				else if(currentState == STATE_COLLADA)
+				{
+					if(navigator.selectedChild == local)
+					{
+						
+					}
+					else if(navigator.selectedChild == web)
+					{
+						if(colladaValidSet && colladaValid)
+						{
+							
+						}
+						else
+						{
+							error.visible = error.includeInLayout = true;
+						}
+					}
+				}
+				
+				if(e)
+				{
+					dispatchEvent(e);
+					dispatchEvent(new CloseEvent(CloseEvent.CLOSE));
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- States for when this pop up is used to load either an image or COLLADA file. -->
+	<s:states>
+		<s:State name="image"/>
+		<s:State name="collada"/>
+	</s:states>
+	
+	<s:VGroup width="100%" 
+			  height="100%" 
+			  paddingBottom="5"
+			  paddingLeft="5"
+			  paddingRight="5"
+			  paddingTop="5">
+		
+		<mx:TabNavigator width="100%" 
+						 height="100%" 
+						 id="navigator">
+			
+			<!-- This container contains the content for loading local images/COLLADA. -->
+			<s:NavigatorContent label="Local" 
+								id="local">
+				<s:VGroup>
+					<!-- TextInput for displaying the file name and a browse button. -->
+					<s:HGroup paddingBottom="5"
+							  paddingLeft="5"
+							  paddingRight="5"
+							  paddingTop="5">
+						<s:TextInput width="300"
+									 id="fileName"
+									 editable="false"/>
+						<s:Button id="browseButton"
+								  label="Browse"
+								  click="browseButton_clickHandler(event)"/>
+					</s:HGroup>
+					<s:Line width="100%"
+							includeIn="image">
+						<s:stroke>
+							<s:SolidColorStroke/>
+						</s:stroke>
+					</s:Line>
+					<!-- An image preview which displays the selected image file. -->
+					<s:VGroup width="100%" 
+							  paddingBottom="5" 
+							  paddingLeft="5"
+							  paddingRight="5"
+							  paddingTop="5"
+							  includeIn="image">
+						<s:Label text="Preview:"/>
+						<s:VGroup width="100%" 
+								  horizontalAlign="center">
+							<mx:Image id="localPreview" 
+									  maintainAspectRatio="true" 
+									  maxWidth="250" 
+									  maxHeight="250"
+									  width="250" 
+									  height="250"/>
+						</s:VGroup>
+					</s:VGroup>
+				</s:VGroup>
+			</s:NavigatorContent>
+			
+			<!-- This container contains the content for loading images/COLLADA from the web. -->
+			<s:NavigatorContent label="Web" id="web">
+				<s:VGroup width="100%">
+					<!-- A TextInput for inputting the url of an image or COLLADA.  As the user types 
+					     in input, the URL is validated and if it is valid image than a preview is
+					     displayed. -->
+					<s:HGroup width="100%" 
+							  paddingBottom="5" 
+							  paddingLeft="5" 
+							  paddingRight="5"
+							  paddingTop="5" 
+							  horizontalAlign="center" 
+							  verticalAlign="middle">
+						<s:Label text="URL:"/>
+						<s:TextInput width="300" 
+									 id="urlInput" 
+									 change="urlInput_changeHandler(event)"/>
+					</s:HGroup>
+					<s:Line width="100%" 
+							includeIn="image">
+						<s:stroke>
+							<s:SolidColorStroke/>
+						</s:stroke>
+					</s:Line>
+					<!-- An image preview which displays the image from the submitted URL.
+					     This is only present when loading an image and only displays an image
+					     if the URL that is input is for a valid image. -->
+					<s:VGroup width="100%" 
+							  paddingBottom="5" 
+							  paddingLeft="5" 
+							  paddingRight="5" 
+							  paddingTop="5"
+							  includeIn="image">
+						<s:Label text="Preview:"/>
+						<s:VGroup width="100%"
+								  horizontalAlign="center">
+							<mx:Image id="webPreview" 
+									  maintainAspectRatio="true"
+									  maxWidth="250" 
+									  maxHeight="250"
+									  width="250" 
+									  height="250"/>
+						</s:VGroup>
+					</s:VGroup>
+				</s:VGroup>
+			</s:NavigatorContent>
+			
+			<!-- This is a placeholder for possibly loading from a database. -->
+			<s:NavigatorContent label="Database" 
+								enabled="false"/>
+			
+		</mx:TabNavigator>
+		
+		<!-- This group holds any error messgaes that occur (right now only from attempting
+		     to load an invalid URL).  It also holds the load button for loading the selected
+		     image/COLLADA. -->
+		<s:VGroup width="100%" 
+				  horizontalAlign="center">
+			
+			<s:Label id="error" 
+					 color="0xff0000" 
+					 text.image="* No image or invalid image selected"
+					 text.collada="* No COLLADA or invalid COLLADA selected"
+					 visible="false" 
+					 includeInLayout="false"/>
+			
+			<s:Button label="Load" 
+					  id="loadButton" 
+					  click="loadButton_clickHandler(event)"/>
+			
+		</s:VGroup>
+	</s:VGroup>
+	
+</s:TitleWindow>

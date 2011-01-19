@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					xmlns:s="library://ns.adobe.com/flex/spark" 
+					xmlns:mx="library://ns.adobe.com/flex/mx" 
+					xmlns:pv3d="view.pv3d.*" 
+					xmlns:threeD="view.modeling.threeD.*"
+					creationComplete="navigatorcontent_creationCompleteHandler(event)">
+	<fx:Script>
+		<![CDATA[
+			import controller.events.GeometryChangedEvent;
+			
+			import model.DataModel;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.core.FlexGlobals;
+			import mx.events.FlexEvent;
+			
+			[Bindable]
+			private var dataModel:DataModel = DataModel.instance;
+			
+			/* Called when the user selects 'close' from the MenuBar. */
+			public function close():void
+			{
+				
+			}
+			
+			/* Called when the user selects 'undo' from the MenuBar. */
+			public function undo():void
+			{
+				
+			}
+			
+			/* Passes the GeometryChangedEvent to the model3D. */
+			public function geometryAdded(event:GeometryChangedEvent):void
+			{
+				var w:Number = FlexGlobals.topLevelApplication.width;
+				var h:Number = FlexGlobals.topLevelApplication.height;
+				model3D.addGeometry(event.geometry,w,h);
+			}
+			
+			/* Passes the GeometryChangedEvent to the model3D. */
+			public function geometryHidden(event:GeometryChangedEvent):void
+			{
+				model3D.hideGeometry(event.geometry);
+			}
+			
+			/* Passes the GeometryChangedEvent to the model3D. */
+			public function geometryRemoved(event:GeometryChangedEvent):void
+			{
+				model3D.removeGeometry(event.geometry);
+			}
+			
+			/* Passes the GeometryChangedEvent to the model3D. */
+			public function geometryShown(event:GeometryChangedEvent):void
+			{
+				model3D.showGeometry(event.geometry);
+			}
+
+			/* Sets the model3D in the dataModel. */
+			protected function navigatorcontent_creationCompleteHandler(event:FlexEvent):void
+			{
+				dataModel.model3D = this.model3D;
+			}
+
+		]]>
+	</fx:Script>
+	
+	<!-- The 3D model. -->
+	<pv3d:ModelerPV3D id="model3D"
+					  selectable="true"/>
+	
+	<!-- Controls for the 3D model. -->
+	<threeD:Controls3D width="250"
+					   height="100%"
+					   id="controls3D"
+					   selectedItem="{model3D.selectedItem}"/>
+	
+</s:NavigatorContent>
